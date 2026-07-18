@@ -43,6 +43,50 @@ def render_html(report: RiskReport, lineage_graph: dict[str, Any], out_dir: Path
     return path
 
 
+def render_markdown(report: RiskReport, out_dir: Path) -> Path:
+    """Write a GitHub PR-comment-friendly markdown summary."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    payload = report.to_dict()
+    summary = payload["summary"]
+    lines = [
+        "## Model Lineage Guard",
+        "",
+        (
+            f"Scanned `{report.target_urn}` with "
+            f"{len(report.findings)} finding(s): "
+            f"{summary['critical']} critical, {summary['high']} high, "
+            f"{summary['medium']} medium, {summary['low']} low."
+        ),
+        "",
+        "Full report: `report.html`",
+        "",
+    ]
+    if report.findings:
+        lines.extend(
+            [
+                "| Severity | Check | Entity | Finding |",
+                "| --- | --- | --- | --- |",
+            ]
+        )
+        for finding in sorted(
+            report.findings,
+            key=lambda item: _SEVERITY_RANK[item.severity],
+            reverse=True,
+        ):
+            lines.append(
+                "| "
+                f"{finding.severity.value} | "
+                f"{finding.check_name} | "
+                f"`{finding.entity_urn or report.target_urn}` | "
+                f"{finding.title} |"
+            )
+    else:
+        lines.append("No risks detected across the scanned lineage neighborhood.")
+    path = out_dir / "pr_comment.md"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
 _SEVERITY_ORDER = (Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW)
 _SEVERITY_RANK = {severity: index for index, severity in enumerate(reversed(_SEVERITY_ORDER))}
 _NODE_COLORS = {
