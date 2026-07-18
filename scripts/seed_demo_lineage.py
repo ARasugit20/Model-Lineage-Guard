@@ -18,7 +18,7 @@ from datahub.emitter.mce_builder import (
     make_term_urn,
 )
 from datahub.emitter.mcp import MetadataChangeProposalWrapper
-from datahub.ingestion.graph.client import DataHubGraph, DatahubClientConfig
+from datahub.ingestion.graph.client import DatahubClientConfig, DataHubGraph
 from datahub.metadata.schema_classes import (
     AuditStampClass,
     DatasetLineageTypeClass,
@@ -39,11 +39,9 @@ from datahub.metadata.schema_classes import (
     SchemaMetadataClass,
     StringTypeClass,
     TagAssociationClass,
-    TimeStampClass,
     UpstreamClass,
     UpstreamLineageClass,
 )
-
 
 ACTOR = make_owner_urn("mlguard-demo", OwnerType.USER)
 PLATFORM = "demo"
@@ -85,7 +83,10 @@ def _emit(graph: DataHubGraph, urn: str, aspect: object) -> None:
 
 def _ownership(*owners: str) -> OwnershipClass:
     return OwnershipClass(
-        owners=[OwnerClass(owner=make_owner_urn(owner, OwnerType.USER), type="DATAOWNER") for owner in owners]
+        owners=[
+            OwnerClass(owner=make_owner_urn(owner, OwnerType.USER), type="DATAOWNER")
+            for owner in owners
+        ]
     )
 
 
@@ -107,7 +108,11 @@ def _field(
     description: str,
     pii: bool = False,
 ) -> SchemaFieldClass:
-    logical_type = StringTypeClass() if native_type.lower() in {"string", "varchar"} else NumberTypeClass()
+    logical_type = (
+        StringTypeClass()
+        if native_type.lower() in {"string", "varchar"}
+        else NumberTypeClass()
+    )
     return SchemaFieldClass(
         fieldPath=name,
         type=SchemaFieldDataTypeClass(type=logical_type),
@@ -125,7 +130,9 @@ def _schema(name: str, fields: list[SchemaFieldClass]) -> SchemaMetadataClass:
         platform=PLATFORM,
         version=0,
         hash=f"mlguard-demo-{name}",
-        platformSchema=OtherSchemaClass(rawSchema="Synthetic schema seeded for Model Lineage Guard."),
+        platformSchema=OtherSchemaClass(
+            rawSchema="Synthetic schema seeded for Model Lineage Guard."
+        ),
         fields=fields,
         created=_audit_stamp(),
         lastModified=_audit_stamp(),
@@ -154,7 +161,9 @@ def seed(graph: DataHubGraph) -> DemoUrns:
         urns.raw_transactions,
         DatasetPropertiesClass(
             name="raw_transactions",
-            description="Payment authorization and chargeback events used by the credit risk model.",
+            description=(
+                "Payment authorization and chargeback events used by the credit risk model."
+            ),
             customProperties={
                 "mlguard.expected_cadence_hours": "24",
                 "mlguard.last_refreshed_at": "2026-07-12T02:15:00Z",
@@ -169,8 +178,16 @@ def seed(graph: DataHubGraph) -> DemoUrns:
         _schema(
             "raw_transactions",
             [
-                _field("customer_id", "string", description="Customer identifier; changed from int."),
-                _field("transaction_amount", "number", description="Authorized transaction amount."),
+                _field(
+                    "customer_id",
+                    "string",
+                    description="Customer identifier; changed from int.",
+                ),
+                _field(
+                    "transaction_amount",
+                    "number",
+                    description="Authorized transaction amount.",
+                ),
                 _field("email", "string", description="Customer email address.", pii=True),
                 _field(
                     "chargeback_resolved_at",
@@ -204,7 +221,9 @@ def seed(graph: DataHubGraph) -> DemoUrns:
         graph,
         urns.chargeback_resolved_feature,
         MLFeaturePropertiesClass(
-            description="Feature derived from chargeback_resolved_at; known only after the label event.",
+            description=(
+                "Feature derived from chargeback_resolved_at; known only after the label event."
+            ),
             dataType="TIME",
             sources=[urns.raw_transactions],
             customProperties={
@@ -222,7 +241,9 @@ def seed(graph: DataHubGraph) -> DemoUrns:
         urns.credit_risk_model,
         MLModelPropertiesClass(
             name="credit_risk_v3",
-            description="Gradient boosted credit risk model used for production authorization decisions.",
+            description=(
+                "Gradient boosted credit risk model used for production authorization decisions."
+            ),
             date=int(time.time() * 1000),
             type="classification",
             mlFeatures=[urns.chargeback_resolved_feature],
@@ -235,7 +256,11 @@ def seed(graph: DataHubGraph) -> DemoUrns:
             },
         ),
     )
-    _emit(graph, urns.credit_risk_model, _upstream(urns.user_risk_features, urns.chargeback_resolved_feature))
+    _emit(
+        graph,
+        urns.credit_risk_model,
+        _upstream(urns.user_risk_features, urns.chargeback_resolved_feature),
+    )
     _emit(graph, urns.credit_risk_model, _ownership("risk-ml-owner"))
     _emit(graph, urns.credit_risk_model, _tags("mlguard-demo", "production-model"))
 

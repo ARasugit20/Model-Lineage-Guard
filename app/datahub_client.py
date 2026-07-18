@@ -52,7 +52,8 @@ class DataHubClient:
 
     def test_connection(self) -> bool:
         """Return whether the configured DataHub instance is reachable."""
-        return bool(self.graph.test_connection())
+        self.graph.test_connection()
+        return True
 
     def get_dataset(self, urn: str) -> dict[str, Any]:
         """Return dataset-level properties for a DataHub dataset URN."""
