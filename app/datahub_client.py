@@ -1,0 +1,207 @@
+"""Thin DataHub client wrapper for Agent Context Kit and SDK calls."""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any, Literal
+
+from datahub.ingestion.graph.client import DatahubClientConfig, DataHubGraph
+from datahub.ingestion.graph.openapi import RelationshipDirection
+from datahub.metadata.schema_classes import (
+    DatasetPropertiesClass,
+    GlobalTagsClass,
+    GlossaryTermsClass,
+    MLModelDeploymentPropertiesClass,
+    MLModelPropertiesClass,
+    OwnershipClass,
+    SchemaMetadataClass,
+    UpstreamLineageClass,
+)
+from datahub.sdk.main_client import DataHubClient as AgentDataHubClient
+from datahub_agent_context import DataHubContext
+
+Direction = Literal["upstream", "downstream"]
+
+
+@dataclass(frozen=True)
+class DataHubSettings:
+    """Connection settings for a DataHub GMS endpoint."""
+
+    gms_host: str
+    token: str | None = None
+
+    @classmethod
+    def from_env(cls) -> DataHubSettings:
+        """Create settings from DATAHUB_GMS_HOST and DATAHUB_TOKEN."""
+        host = os.getenv("DATAHUB_GMS_HOST", "http://localhost:8080")
+        token = os.getenv("DATAHUB_TOKEN") or None
+        return cls(gms_host=host, token=token)
+
+
+class DataHubClient:
+    """Read DataHub metadata through Agent Context Kit with SDK graph fallbacks."""
+
+    def __init__(self, settings: DataHubSettings | None = None) -> None:
+        self.settings = settings or DataHubSettings.from_env()
+        config = DatahubClientConfig(server=self.settings.gms_host, token=self.settings.token)
+        self.graph = DataHubGraph(config)
+        self.agent_client = AgentDataHubClient(graph=self.graph)
+        self.context = DataHubContext(self.agent_client)
+
+    def test_connection(self) -> bool:
+        """Return whether the configured DataHub instance is reachable."""
+        return bool(self.graph.test_connection())
+
+    def get_dataset(self, urn: str) -> dict[str, Any]:
+        """Return dataset-level properties for a DataHub dataset URN."""
+        properties = self.graph.get_aspect(urn, DatasetPropertiesClass)
+        return self._aspect_to_dict(properties)
+
+    def get_model(self, urn: str) -> dict[str, Any]:
+        """Return ML model properties for a DataHub ML model URN."""
+        properties = self.graph.get_aspect(urn, MLModelPropertiesClass)
+        return self._aspect_to_dict(properties)
+
+    def get_deployment(self, urn: str) -> dict[str, Any]:
+        """Return ML model deployment properties for a deployment URN."""
+        properties = self.graph.get_aspect(urn, MLModelDeploymentPropertiesClass)
+        return self._aspect_to_dict(properties)
+
+    def get_lineage(self, urn: str, direction: Direction = "upstream") -> list[dict[str, Any]]:
+        """Return direct lineage edges around an entity."""
+        relationship_direction = (
+            RelationshipDirection.INCOMING
+            if direction == "upstream"
+            else RelationshipDirection.OUTGOING
+        )
+        relationships = self.graph.get_related_entities(
+            entity_urn=urn,
+            relationship_types=["DownstreamOf"],
+            direction=relationship_direction,
+        )
+        return [
+            {
+                "urn": related.urn,
+                "type": getattr(related, "type", None),
+                "relationship": getattr(related, "relationship", None),
+            }
+            for related in relationships
+        ]
+
+    def get_upstream_lineage(self, urn: str) -> dict[str, Any]:
+        """Return the raw upstreamLineage aspect for an entity, if present."""
+        lineage = self.graph.get_aspect(urn, UpstreamLineageClass)
+        return self._aspect_to_dict(lineage)
+
+    def get_owners(self, urn: str) -> list[str]:
+        """Return owner URNs registered on an entity."""
+        ownership = self.graph.get_aspect(urn, OwnershipClass)
+        if not ownership:
+            return []
+        return [owner.owner for owner in ownership.owners]
+
+    def get_schema(self, urn: str) -> list[dict[str, Any]]:
+        """Return schema fields for a dataset-like entity."""
+        schema = self.graph.get_aspect(urn, SchemaMetadataClass)
+        if not schema:
+            return []
+        return [
+            {
+                "fieldPath": field.fieldPath,
+                "nativeDataType": field.nativeDataType,
+                "description": field.description,
+                "nullable": field.nullable,
+                "globalTags": self._aspect_to_dict(field.globalTags),
+                "glossaryTerms": self._aspect_to_dict(field.glossaryTerms),
+            }
+            for field in schema.fields
+        ]
+
+    def get_glossary_terms(self, urn: str) -> list[str]:
+        """Return glossary term URNs directly attached to an entity."""
+        terms = self.graph.get_aspect(urn, GlossaryTermsClass)
+        if not terms:
+            return []
+        return [term.urn for term in terms.terms]
+
+    def get_tags(self, urn: str) -> list[str]:
+        """Return tag URNs directly attached to an entity."""
+        tags = self.graph.get_aspect(urn, GlobalTagsClass)
+        if not tags:
+            return []
+        return [tag.tag for tag in tags.tags]
+
+    def list_ml_models(self) -> list[str]:
+        """Return ML model URNs visible to the configured DataHub client."""
+        response = self.graph.get_search_results(entity="mlmodel", start=0, count=100)
+        entities = response.get("entities", [])
+        return [entity["entity"] for entity in entities if "entity" in entity]
+
+    def scan_context(self, urn: str) -> dict[str, Any]:
+        """Collect the metadata bundle that later risk checks will consume."""
+        upstreams = self._walk_lineage(urn, "upstream", max_depth=4)
+        downstreams = self._walk_lineage(urn, "downstream", max_depth=2)
+        related_urns = [edge["urn"] for edge in upstreams + downstreams if edge.get("urn")]
+        related_urns.append(urn)
+        unique_urns = sorted(set(related_urns))
+
+        return {
+            "target_urn": urn,
+            "scan_started_at": datetime.now(UTC).isoformat(),
+            "lineage": {
+                "upstream": upstreams,
+                "downstream": downstreams,
+                "raw_upstream_aspect": self.get_upstream_lineage(urn),
+            },
+            "entities": {
+                entity_urn: self.describe_entity(entity_urn) for entity_urn in unique_urns
+            },
+        }
+
+    def _walk_lineage(self, urn: str, direction: Direction, max_depth: int) -> list[dict[str, Any]]:
+        """Walk lineage edges breadth-first to collect a compact neighborhood."""
+        seen: set[str] = {urn}
+        frontier = [(urn, 0)]
+        edges: list[dict[str, Any]] = []
+
+        while frontier:
+            current_urn, depth = frontier.pop(0)
+            if depth >= max_depth:
+                continue
+            for edge in self.get_lineage(current_urn, direction):
+                related_urn = edge.get("urn")
+                if not related_urn:
+                    continue
+                enriched = {**edge, "source_urn": current_urn, "depth": depth + 1}
+                edges.append(enriched)
+                if related_urn not in seen:
+                    seen.add(related_urn)
+                    frontier.append((related_urn, depth + 1))
+        return edges
+
+    def describe_entity(self, urn: str) -> dict[str, Any]:
+        """Return a compact metadata description for any supported entity URN."""
+        return {
+            "urn": urn,
+            "dataset": self.get_dataset(urn),
+            "model": self.get_model(urn),
+            "deployment": self.get_deployment(urn),
+            "owners": self.get_owners(urn),
+            "schema": self.get_schema(urn),
+            "tags": self.get_tags(urn),
+            "glossary_terms": self.get_glossary_terms(urn),
+            "upstream_lineage": self.get_upstream_lineage(urn),
+        }
+
+    @staticmethod
+    def _aspect_to_dict(aspect: Any | None) -> dict[str, Any]:
+        if aspect is None:
+            return {}
+        if hasattr(aspect, "to_obj"):
+            value = aspect.to_obj()
+            return value if isinstance(value, dict) else {"value": value}
+        if hasattr(aspect, "__dict__"):
+            return dict(aspect.__dict__)
+        return {"value": aspect}
