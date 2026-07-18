@@ -106,6 +106,16 @@
       </section>
       <section class="summary-pane">
         <h2>Risk Summary</h2>
+        <p class="target">
+          Write-back:
+          {% if report.writeback.applied %}
+          applied
+          {% elif report.writeback.dry_run %}
+          dry run
+          {% else %}
+          off
+          {% endif %}
+        </p>
         <div class="score-strip">
           {% for severity in severity_order %}
           <div class="score">

@@ -83,3 +83,4 @@ def test_render_markdown_writes_pr_comment(tmp_path) -> None:
     assert "1 finding(s)" in markdown
     assert "| Severity | Check | Entity | Finding |" in markdown
     assert "pii_exposure" in markdown
+    assert "Write-back: off" in markdown

@@ -10,6 +10,8 @@ from app.checks import run_checks
 from app.datahub_client import DataHubClient
 from app.findings import RiskReport
 from app.report import render_html, render_json, render_markdown
+from app.writeback import apply as apply_writeback
+from app.writeback import build_mcps
 
 app = typer.Typer(
     name="mlguard",
@@ -45,6 +47,10 @@ def scan(
         bool,
         typer.Option("--write-back", help="Opt in to writing findings back to DataHub."),
     ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Preview DataHub write-back MCPs without emitting them."),
+    ] = False,
 ) -> None:
     """Scan one DataHub entity for lineage risks."""
     client = DataHubClient()
@@ -55,7 +61,12 @@ def scan(
         findings=findings,
         lineage=context["lineage"],
         scan_started_at=context["scan_started_at"],
+        writeback_applied=write_back and not dry_run,
+        writeback_dry_run=write_back and dry_run,
     )
+    mcps = build_mcps(report) if write_back else []
+    if write_back and not dry_run:
+        apply_writeback(client, mcps)
     json_path = render_json(report, out)
     html_path = render_html(report, context["lineage"], out)
     markdown_path = render_markdown(report, out)
@@ -71,6 +82,12 @@ def scan(
     typer.echo(f"HTML report: {html_path}")
     typer.echo(f"PR comment: {markdown_path}")
     typer.echo(f"Write-back requested: {write_back}")
+    if write_back and dry_run:
+        typer.echo("Write-back dry run MCPs:")
+        for mcp in mcps:
+            typer.echo(f"  {mcp.entityUrn} -> {mcp.aspectName}")
+    elif write_back:
+        typer.echo(f"Write-back applied: {len(mcps)} MCP(s)")
 
 
 @app.command("scan-all")
@@ -83,6 +100,10 @@ def scan_all(
         bool,
         typer.Option("--write-back", help="Opt in to writing findings back to DataHub."),
     ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run", help="Preview DataHub write-back MCPs without emitting them."),
+    ] = False,
 ) -> None:
     """Scan all DataHub ML models visible to the configured client."""
     client = DataHubClient()
@@ -93,3 +114,4 @@ def scan_all(
         typer.echo(f"  {model}")
     typer.echo(f"Report output directory for Phase 3: {out}")
     typer.echo(f"Write-back requested: {write_back}")
+    typer.echo(f"Write-back dry run: {dry_run}")

@@ -48,6 +48,9 @@ def render_markdown(report: RiskReport, out_dir: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     payload = report.to_dict()
     summary = payload["summary"]
+    writeback_status = (
+        "applied" if report.writeback_applied else "dry-run" if report.writeback_dry_run else "off"
+    )
     lines = [
         "## Model Lineage Guard",
         "",
@@ -59,6 +62,7 @@ def render_markdown(report: RiskReport, out_dir: Path) -> Path:
         ),
         "",
         "Full report: `report.html`",
+        f"Write-back: {writeback_status}",
         "",
     ]
     if report.findings:
