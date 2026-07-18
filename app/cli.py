@@ -9,7 +9,7 @@ from app import __version__
 from app.checks import run_checks
 from app.datahub_client import DataHubClient
 from app.findings import RiskReport
-from app.report import render_json
+from app.report import render_html, render_json
 
 app = typer.Typer(
     name="mlguard",
@@ -57,6 +57,7 @@ def scan(
         scan_started_at=context["scan_started_at"],
     )
     json_path = render_json(report, out)
+    html_path = render_html(report, context["lineage"], out)
     typer.echo(f"Connected to DataHub at {client.settings.gms_host}")
     typer.echo(f"Target: {context['target_urn']}")
     typer.echo(f"Upstream edges: {len(context['lineage']['upstream'])}")
@@ -66,6 +67,7 @@ def scan(
     for finding in findings:
         typer.echo(f"  [{finding.severity}] {finding.title} ({finding.check_name})")
     typer.echo(f"JSON report: {json_path}")
+    typer.echo(f"HTML report: {html_path}")
     typer.echo(f"Write-back requested: {write_back}")
 
 

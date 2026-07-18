@@ -2,12 +2,155 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Model Lineage Guard Report</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1120;
+        --panel: #111827;
+        --panel-soft: #172033;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --line: #263244;
+        --critical: #ef4444;
+        --high: #f97316;
+        --medium: #f59e0b;
+        --low: #38bdf8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(360px, 0.8fr);
+        min-height: 100vh;
+      }
+      .graph-pane {
+        padding: 28px;
+        border-right: 1px solid var(--line);
+      }
+      .summary-pane {
+        padding: 28px;
+        overflow: auto;
+      }
+      h1, h2, h3, p { margin-top: 0; }
+      h1 { font-size: 24px; letter-spacing: 0; }
+      h2 { font-size: 16px; color: var(--muted); text-transform: uppercase; }
+      code {
+        color: #bfdbfe;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        overflow-wrap: anywhere;
+      }
+      .target { margin-bottom: 18px; color: var(--muted); }
+      #lineage-graph {
+        width: 100%;
+        height: calc(100vh - 150px);
+        min-height: 560px;
+        border: 1px solid var(--line);
+        background: #0f172a;
+      }
+      .score-strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+      .score {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        padding: 12px;
+      }
+      .score strong { display: block; font-size: 24px; }
+      .score span { color: var(--muted); font-size: 12px; }
+      .finding {
+        border: 1px solid var(--line);
+        background: var(--panel);
+        padding: 14px;
+        margin-bottom: 12px;
+      }
+      .finding h3 { font-size: 15px; margin-bottom: 8px; }
+      .finding p { color: var(--muted); line-height: 1.45; }
+      .badge {
+        display: inline-block;
+        padding: 2px 8px;
+        margin-bottom: 8px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0;
+        background: var(--panel-soft);
+      }
+      .critical { color: var(--critical); }
+      .high { color: var(--high); }
+      .medium { color: var(--medium); }
+      .low { color: var(--low); }
+      .empty {
+        border: 1px solid var(--line);
+        padding: 20px;
+        background: var(--panel);
+        color: var(--muted);
+      }
+    </style>
   </head>
   <body>
     <main>
-      <h1>Model Lineage Guard</h1>
-      <p>Phase 3 will render the full lineage risk report here.</p>
+      <section class="graph-pane">
+        <h1>Model Lineage Guard</h1>
+        <p class="target">Target <code>{{ report.target_urn }}</code></p>
+        <div id="lineage-graph"></div>
+      </section>
+      <section class="summary-pane">
+        <h2>Risk Summary</h2>
+        <div class="score-strip">
+          {% for severity in severity_order %}
+          <div class="score">
+            <strong class="{{ severity }}">{{ report.summary[severity] }}</strong>
+            <span>{{ severity }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% if report.findings %}
+          {% for severity in severity_order %}
+            {% for finding in findings_by_severity[severity] %}
+            <article class="finding">
+              <span class="badge {{ severity }}">{{ severity }}</span>
+              <h3>{{ finding.title }}</h3>
+              <p>{{ finding.explanation }}</p>
+              {% if finding.entity_urn %}
+              <p>Entity <code>{{ finding.entity_urn }}</code></p>
+              {% endif %}
+              {% if finding.remediation %}
+              <p>Remediation: {{ finding.remediation }}</p>
+              {% endif %}
+            </article>
+            {% endfor %}
+          {% endfor %}
+        {% else %}
+          <div class="empty">
+            No risks detected across the scanned lineage neighborhood.
+          </div>
+        {% endif %}
+      </section>
     </main>
+    <script>
+      const graph = {{ graph_json | safe }};
+      const container = document.getElementById("lineage-graph");
+      const data = {
+        nodes: new vis.DataSet(graph.nodes),
+        edges: new vis.DataSet(graph.edges)
+      };
+      const options = {
+        layout: { improvedLayout: true },
+        physics: { stabilization: true, barnesHut: { springLength: 180 } },
+        edges: { color: "#64748b", smooth: { type: "dynamic" } },
+        interaction: { hover: true, tooltipDelay: 120 }
+      };
+      new vis.Network(container, data, options);
+    </script>
   </body>
 </html>
