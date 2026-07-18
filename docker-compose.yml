@@ -1,0 +1,8 @@
+services:
+  datahub-quickstart:
+    image: acryldata/datahub-actions:head
+    profiles:
+      - docs
+    command:
+      - echo
+      - "Use the official local runtime: pip install acryl-datahub && datahub docker quickstart"
