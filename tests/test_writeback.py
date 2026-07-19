@@ -3,7 +3,7 @@
 from unittest.mock import Mock
 
 from app.findings import Finding, RiskReport, Severity
-from app.writeback import apply, build_mcps
+from app.writeback import apply, build_mcps, human_review_findings, render_mcp_json
 
 
 def test_build_mcps_maps_findings_to_risk_tags() -> None:
@@ -53,3 +53,49 @@ def test_apply_emits_every_mcp() -> None:
     apply(client, mcps)
 
     client.graph.emit_mcp.assert_called_once_with(mcps[0])
+
+
+def test_human_review_findings_are_excluded_from_writeback() -> None:
+    report = RiskReport(
+        target_urn="urn:li:mlModel:(demo,credit_risk_v3,PROD)",
+        findings=[
+            Finding(
+                check_name="stale_dataset",
+                severity=Severity.HIGH,
+                title="Stale data",
+                explanation="Refresh SLA missed.",
+            ),
+            Finding(
+                check_name="feature_leakage_risk",
+                severity=Severity.HIGH,
+                title="Leakage risk",
+                explanation="Feature may be post-outcome.",
+            ),
+        ],
+    )
+
+    assert build_mcps(report) == []
+    assert [finding.check_name for finding in human_review_findings(report)] == [
+        "stale_dataset",
+        "feature_leakage_risk",
+    ]
+
+
+def test_render_mcp_json_writes_dry_run_without_emitting(tmp_path) -> None:
+    client = Mock()
+    report = RiskReport(
+        target_urn="urn:li:mlModel:(demo,credit_risk_v3,PROD)",
+        findings=[
+            Finding(
+                check_name="missing_owner",
+                severity=Severity.MEDIUM,
+                title="Missing owner",
+                explanation="No owner.",
+            )
+        ],
+    )
+
+    path = render_mcp_json(build_mcps(report), tmp_path)
+
+    assert "risk:missing-owner" in path.read_text(encoding="utf-8")
+    client.graph.emit_mcp.assert_not_called()

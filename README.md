@@ -1,40 +1,146 @@
 # Model Lineage Guard
 
-Model Lineage Guard inspects DataHub metadata and ML lineage to identify production ML risks, then prepares findings that can be written back to DataHub.
+[![CI](https://github.com/ARasugit20/Model-Lineage-Guard/actions/workflows/ci.yml/badge.svg)](https://github.com/ARasugit20/Model-Lineage-Guard/actions/workflows/ci.yml)
 
-This repository is being built phase by phase for the Build with DataHub Agent Hackathon.
+Model Lineage Guard is a DataHub-aware CLI agent that scans ML lineage for production risks that usually hide between datasets, feature tables, models, and deployments: schema drift, PII exposure, stale upstream data, missing ownership, and feature leakage. It reads DataHub metadata, produces JSON/HTML/Markdown reports, and can write safe audit tags back to DataHub through MetadataChangeProposals.
 
-## Current Status
+License: Apache-2.0. Hackathon: Build with DataHub Agent Hackathon, Agents That Do Real Work / Production ML Agents track. Current phase: Phase 3/4 build-out with reports, dry-run write-back, tests, and examples.
 
-Phase 2 connectivity and risk checks are in place:
+Demo video: [DEMO VIDEO LINK]
 
-- Installable Python package with the `mlguard` Typer CLI.
-- DataHub client wrapper using Agent Context Kit plus SDK graph operations.
-- Synthetic demo lineage seeding script.
-- Five risk checks with mocked pytest coverage:
-  - schema drift
-  - PII exposure
-  - stale upstream dataset
-  - missing owner
-  - feature leakage risk
-- Placeholder modules for reporting and write-back.
+Tech stack: Python 3.11+, Typer, acryl-datahub, datahub-agent-context, Jinja2, vis-network, pytest, ruff, mypy.
 
-Later phases will add report generation, write-back, examples, and final docs.
+## Quickstart
 
-## Phase 1 Quickstart
+One-command live demo on a machine with Docker available:
 
-Start DataHub with the official quickstart:
+```bash
+make demo
+```
+
+Manual live DataHub path:
 
 ```bash
 pip install acryl-datahub
 datahub docker quickstart
+pip install -e ".[dev]"
+python3 scripts/seed_demo_lineage.py
+mlguard scan 'urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)' --out out/credit_risk_v3 --write-back dry-run
 ```
 
-Then seed the demo graph and inspect a model:
+Offline artifact preview, useful when Docker is not available:
 
 ```bash
-cd model-lineage-guard
-pip install -e .
-python3 scripts/seed_demo_lineage.py
-mlguard scan 'urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)'
+make demo-offline
 ```
+
+## Environment
+
+Create `.env` from `.env.example` when scanning live DataHub:
+
+```bash
+DATAHUB_GMS_HOST=http://localhost:8080
+DATAHUB_TOKEN=
+```
+
+`DATAHUB_GMS_HOST` points to DataHub GMS. `DATAHUB_TOKEN` is optional for local quickstart and required for authenticated DataHub instances.
+
+## Commands
+
+Scan one entity and write reports:
+
+```bash
+mlguard scan 'urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)' --out out/credit_risk_v3 --write-back dry-run
+```
+
+Scan all visible ML models:
+
+```bash
+mlguard scan-all --out out/all-models --write-back dry-run
+```
+
+Generate deterministic demo reports without connecting to DataHub:
+
+```bash
+mlguard demo-report --out examples --write-back dry-run
+```
+
+Real stdout from `mlguard demo-report --out examples --write-back dry-run`:
+
+```text
+Target: urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)
+Upstream edges: 3
+Downstream edges: 2
+Findings: 7
+  [high] Upstream schema changed after feature computation (schema_drift)
+  [critical] PII flows into model lineage without an approved exception (pii_exposure)
+  [critical] PII flows into model lineage without an approved exception (pii_exposure)
+  [high] Upstream dataset is stale for its declared cadence (stale_dataset)
+  [medium] Lineage entity has no registered owner (missing_owner)
+  [high] Feature may use post-outcome information (feature_leakage_risk)
+  [high] Feature may use post-outcome information (feature_leakage_risk)
+JSON report: examples/report.json
+HTML report: examples/report.html
+PR comment: examples/pr_comment.md
+Write-back dry-run MCP JSON: examples/mcp_dryrun.json
+Human-review-only findings excluded from write-back:
+  stale_dataset: Upstream dataset is stale for its declared cadence
+  feature_leakage_risk: Feature may use post-outcome information
+  feature_leakage_risk: Feature may use post-outcome information
+```
+
+## Write-Back
+
+Write-back is explicit and safe by default:
+
+```bash
+mlguard scan '<urn>' --write-back dry-run
+mlguard scan '<urn>' --write-back apply --confirm
+```
+
+Dry-run builds MCP payloads and writes them to `mcp_dryrun.json` without sending anything to DataHub. Apply mode requires `--confirm` and emits one MCP at a time through the DataHub SDK.
+
+Safe write-back currently adds risk tags for schema drift, PII exposure, and missing owner findings. Stale dataset and feature leakage findings are flagged for human review only and excluded from automated write-back.
+
+See [examples/sample_mcp_dryrun.json](examples/sample_mcp_dryrun.json).
+
+## Reports
+
+Every scan writes:
+
+- `report.json`: machine-readable report
+- `report.html`: static visual report with a vis-network lineage graph
+- `pr_comment.md`: GitHub PR-comment-ready Markdown summary
+
+Generated samples:
+
+- [examples/sample_report.json](examples/sample_report.json)
+- [examples/sample_report.html](examples/sample_report.html)
+- [examples/sample_report.md](examples/sample_report.md)
+
+## Testing
+
+Run all local checks:
+
+```bash
+make test
+```
+
+This runs:
+
+```bash
+ruff check .
+mypy app/
+pytest -q
+```
+
+Unit tests mock DataHub metadata and do not require a live DataHub instance. Live DataHub verification requires Docker and the official `datahub docker quickstart` runtime.
+
+## Roadmap
+
+- Phase 2 complete: DataHub client wrapper, five risk checks, mocked tests.
+- Phase 3 in progress: JSON/HTML/Markdown reporting, generated examples.
+- Phase 4 in progress: safe write-back dry-run/apply flow.
+- Next: live DataHub integration test, configuration file for check thresholds, extra governance/model-eval checks, lineage caching and pagination.
+
+Out of scope: multi-tenant auth, raw warehouse connectors, and a persistent database. DataHub is the source of truth.

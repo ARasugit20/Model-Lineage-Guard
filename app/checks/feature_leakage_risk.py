@@ -50,6 +50,10 @@ class FeatureLeakageRiskCheck(Check):
                         "suspicious_fields": suspicious_fields,
                     },
                     entity_urn=urn,
+                    remediation=(
+                        "Human review required: confirm the feature is available at "
+                        "prediction time or remove it from model training."
+                    ),
                 )
             )
         return findings

@@ -30,6 +30,7 @@ class MissingOwnerCheck(Check):
                     ),
                     evidence={"entity_urn": urn, "owners": []},
                     entity_urn=urn,
+                    remediation="Assign a DataHub owner for this lineage entity.",
                 )
             )
         return findings

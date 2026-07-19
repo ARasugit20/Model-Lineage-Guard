@@ -42,6 +42,10 @@ class PiiExposureCheck(Check):
                             "approved_exception": False,
                         },
                         entity_urn=urn,
+                        remediation=(
+                            "Remove the sensitive field from the feature set or attach an approved "
+                            "PII exception in DataHub before production use."
+                        ),
                     )
                 )
         return findings

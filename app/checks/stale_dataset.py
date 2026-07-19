@@ -44,6 +44,10 @@ class StaleDatasetCheck(Check):
                         "observed_age_hours": round(age_hours, 2),
                     },
                     entity_urn=urn,
+                    remediation=(
+                        "Human review required: refresh the upstream dataset or update "
+                        "the declared cadence if the SLA has changed."
+                    ),
                 )
             )
         return findings

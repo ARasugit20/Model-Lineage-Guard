@@ -16,4 +16,4 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: ruff check .
       - run: mypy app/
-      - run: pytest
+      - run: pytest -q

@@ -53,6 +53,10 @@ class SchemaDriftCheck(Check):
                             "last_recomputed_at": consumer_props.get("mlguard.last_recomputed_at"),
                         },
                         entity_urn=consumer_urn,
+                        remediation=(
+                            "Recompute the downstream feature table after validating the upstream "
+                            "schema change, then update the expected schema metadata."
+                        ),
                     )
                 )
         return findings

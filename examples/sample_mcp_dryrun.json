@@ -1,0 +1,42 @@
+[
+  {
+    "entityType": "mlFeatureTable",
+    "entityUrn": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)",
+    "changeType": "UPSERT",
+    "aspectName": "globalTags",
+    "aspect": {
+      "value": "{\"tags\": [{\"tag\": \"urn:li:tag:risk:schema-drift\"}]}",
+      "contentType": "application/json"
+    }
+  },
+  {
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)",
+    "changeType": "UPSERT",
+    "aspectName": "globalTags",
+    "aspect": {
+      "value": "{\"tags\": [{\"tag\": \"urn:li:tag:risk:pii-exposure\"}]}",
+      "contentType": "application/json"
+    }
+  },
+  {
+    "entityType": "mlFeatureTable",
+    "entityUrn": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)",
+    "changeType": "UPSERT",
+    "aspectName": "globalTags",
+    "aspect": {
+      "value": "{\"tags\": [{\"tag\": \"urn:li:tag:risk:pii-exposure\"}]}",
+      "contentType": "application/json"
+    }
+  },
+  {
+    "entityType": "mlFeatureTable",
+    "entityUrn": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)",
+    "changeType": "UPSERT",
+    "aspectName": "globalTags",
+    "aspect": {
+      "value": "{\"tags\": [{\"tag\": \"urn:li:tag:risk:missing-owner\"}]}",
+      "contentType": "application/json"
+    }
+  }
+]
