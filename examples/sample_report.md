@@ -1,6 +1,6 @@
 ## Model Lineage Guard
 
-Scanned `urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)` with 7 finding(s): 2 critical, 4 high, 1 medium, 0 low.
+Scanned `urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)` with 9 finding(s): 2 critical, 5 high, 2 medium, 0 low.
 
 Full report: `report.html`
 Write-back: dry-run
@@ -13,4 +13,6 @@ Write-back: dry-run
 | high | stale_dataset | `urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)` | Upstream dataset is stale for its declared cadence |
 | high | feature_leakage_risk | `urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)` | Feature may use post-outcome information |
 | high | feature_leakage_risk | `urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)` | Feature may use post-outcome information |
+| high | model_performance_regression | `urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)` | Model performance regressed below baseline |
 | medium | missing_owner | `urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)` | Lineage entity has no registered owner |
+| medium | deployment_config_drift | `urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)` | Deployment config drift detected |

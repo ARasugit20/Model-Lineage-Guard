@@ -10,6 +10,7 @@ REQUIRED_FILES = (
     "sample_report.html",
     "sample_report.md",
     "sample_mcp_dryrun.json",
+    "sample_writeback_audit.jsonl",
 )
 
 
@@ -22,6 +23,9 @@ def main() -> None:
 
     json.loads((examples_dir / "sample_report.json").read_text(encoding="utf-8"))
     json.loads((examples_dir / "sample_mcp_dryrun.json").read_text(encoding="utf-8"))
+    audit = (examples_dir / "sample_writeback_audit.jsonl").read_text(encoding="utf-8")
+    if "previewed" not in audit:
+        raise SystemExit("Example audit log does not include a dry-run preview record.")
 
     html = (examples_dir / "sample_report.html").read_text(encoding="utf-8")
     markdown = (examples_dir / "sample_report.md").read_text(encoding="utf-8")

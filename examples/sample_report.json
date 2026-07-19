@@ -100,6 +100,34 @@
       "remediation": "Human review required: confirm the feature is available at prediction time or remove it from model training.",
       "severity": "high",
       "title": "Feature may use post-outcome information"
+    },
+    {
+      "check_name": "model_performance_regression",
+      "entity_urn": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)",
+      "evidence": {
+        "baseline": 0.89,
+        "current": 0.841,
+        "entity_urn": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)",
+        "metric": "auc",
+        "tolerance": 0.01
+      },
+      "explanation": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD) reports auc=0.841, below baseline 0.890 with tolerance 0.010.",
+      "remediation": "Review the latest evaluation slice, compare training and serving data, and hold promotion until the metric returns to baseline.",
+      "severity": "high",
+      "title": "Model performance regressed below baseline"
+    },
+    {
+      "check_name": "deployment_config_drift",
+      "entity_urn": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)",
+      "evidence": {
+        "actual_instance_type": "ml.t3.medium",
+        "entity_urn": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)",
+        "expected_instance_type": "ml.m5.large"
+      },
+      "explanation": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD) is running on ml.t3.medium, but last known-good config expects ml.m5.large.",
+      "remediation": "Compare the deployment change history, confirm the instance change was approved, or roll back to the last known-good config.",
+      "severity": "medium",
+      "title": "Deployment config drift detected"
     }
   ],
   "lineage": {
@@ -136,9 +164,9 @@
   "scan_started_at": "2026-07-17T12:00:00+00:00",
   "summary": {
     "critical": 2,
-    "high": 4,
+    "high": 5,
     "low": 0,
-    "medium": 1
+    "medium": 2
   },
   "target_urn": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)",
   "writeback": {

@@ -74,6 +74,30 @@
         padding: 14px;
         margin-bottom: 12px;
       }
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .filters select {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        color: var(--text);
+        padding: 8px;
+      }
+      details {
+        border-top: 1px solid var(--line);
+        margin-top: 10px;
+        padding-top: 10px;
+      }
+      pre {
+        background: #020617;
+        border: 1px solid var(--line);
+        overflow: auto;
+        padding: 10px;
+        white-space: pre-wrap;
+      }
       .finding h3 { font-size: 15px; margin-bottom: 8px; }
       .finding p { color: var(--muted); line-height: 1.45; }
       .badge {
@@ -112,6 +136,38 @@
           dry run
           
         </p>
+        <div class="filters">
+          <select id="severity-filter" aria-label="Filter by severity">
+            <option value="all">All severities</option>
+            
+            <option value="critical">critical</option>
+            
+            <option value="high">high</option>
+            
+            <option value="medium">medium</option>
+            
+            <option value="low">low</option>
+            
+          </select>
+          <select id="check-filter" aria-label="Filter by check">
+            <option value="all">All checks</option>
+            
+            <option value="deployment_config_drift">deployment_config_drift</option>
+            
+            <option value="feature_leakage_risk">feature_leakage_risk</option>
+            
+            <option value="missing_owner">missing_owner</option>
+            
+            <option value="model_performance_regression">model_performance_regression</option>
+            
+            <option value="pii_exposure">pii_exposure</option>
+            
+            <option value="schema_drift">schema_drift</option>
+            
+            <option value="stale_dataset">stale_dataset</option>
+            
+          </select>
+        </div>
         <div class="score-strip">
           
           <div class="score">
@@ -120,12 +176,12 @@
           </div>
           
           <div class="score">
-            <strong class="high">4</strong>
+            <strong class="high">5</strong>
             <span>high</span>
           </div>
           
           <div class="score">
-            <strong class="medium">1</strong>
+            <strong class="medium">2</strong>
             <span>medium</span>
           </div>
           
@@ -138,102 +194,238 @@
         
           
             
-            <article class="finding">
+            <article class="finding" data-severity="critical" data-check="pii_exposure">
               <span class="badge critical">critical</span>
               <h3>PII flows into model lineage without an approved exception</h3>
               <p>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD) exposes sensitive field evidence in the scanned model lineage and no approved exception was found.</p>
               
-              <p>Entity <code>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)</code></p>
+              <p>
+                Entity <code>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)</code>
+                
+              </p>
               
               
               <p>Remediation: Remove the sensitive field from the feature set or attach an approved PII exception in DataHub before production use.</p>
               
+              <details>
+                <summary>Evidence</summary>
+                <pre>{
+  "approved_exception": false,
+  "columns": [
+    "email"
+  ],
+  "entity_urn": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)"
+}</pre>
+              </details>
             </article>
             
-            <article class="finding">
+            <article class="finding" data-severity="critical" data-check="pii_exposure">
               <span class="badge critical">critical</span>
               <h3>PII flows into model lineage without an approved exception</h3>
               <p>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features) exposes sensitive field evidence in the scanned model lineage and no approved exception was found.</p>
               
-              <p>Entity <code>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)</code></p>
+              <p>
+                Entity <code>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)</code>
+                
+              </p>
               
               
               <p>Remediation: Remove the sensitive field from the feature set or attach an approved PII exception in DataHub before production use.</p>
               
+              <details>
+                <summary>Evidence</summary>
+                <pre>{
+  "approved_exception": false,
+  "columns": [
+    "raw_transactions.email"
+  ],
+  "entity_urn": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)"
+}</pre>
+              </details>
             </article>
             
           
             
-            <article class="finding">
+            <article class="finding" data-severity="high" data-check="schema_drift">
               <span class="badge high">high</span>
               <h3>Upstream schema changed after feature computation</h3>
               <p>Upstream urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD) changed schema (customer_id:int-&gt;string); urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features) has not recorded a recomputation after that change.</p>
               
-              <p>Entity <code>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)</code></p>
+              <p>
+                Entity <code>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)</code>
+                
+              </p>
               
               
               <p>Remediation: Recompute the downstream feature table after validating the upstream schema change, then update the expected schema metadata.</p>
               
+              <details>
+                <summary>Evidence</summary>
+                <pre>{
+  "downstream_urn": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)",
+  "last_recomputed_at": "2026-07-09T01:00:00Z",
+  "schema_change": "customer_id:int-\u003estring",
+  "schema_changed_at": "2026-07-10T08:00:00Z",
+  "upstream_urn": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)"
+}</pre>
+              </details>
             </article>
             
-            <article class="finding">
+            <article class="finding" data-severity="high" data-check="stale_dataset">
               <span class="badge high">high</span>
               <h3>Upstream dataset is stale for its declared cadence</h3>
               <p>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD) was last refreshed 129.8 hours before the scan, exceeding its 24.0 hour cadence.</p>
               
-              <p>Entity <code>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)</code></p>
+              <p>
+                Entity <code>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)</code>
+                
+              </p>
               
               
               <p>Remediation: Human review required: refresh the upstream dataset or update the declared cadence if the SLA has changed.</p>
               
+              <details>
+                <summary>Evidence</summary>
+                <pre>{
+  "entity_urn": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)",
+  "expected_cadence_hours": 24.0,
+  "last_refreshed_at": "2026-07-12T02:15:00Z",
+  "observed_age_hours": 129.75
+}</pre>
+              </details>
             </article>
             
-            <article class="finding">
+            <article class="finding" data-severity="high" data-check="feature_leakage_risk">
               <span class="badge high">high</span>
               <h3>Feature may use post-outcome information</h3>
               <p>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD) contains feature evidence that may be known only after the prediction label is determined.</p>
               
-              <p>Entity <code>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)</code></p>
+              <p>
+                Entity <code>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)</code>
+                
+              </p>
               
               
               <p>Remediation: Human review required: confirm the feature is available at prediction time or remove it from model training.</p>
               
+              <details>
+                <summary>Evidence</summary>
+                <pre>{
+  "entity_urn": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)",
+  "leakage_evidence": null,
+  "suspicious_fields": [
+    "chargeback_resolved_at"
+  ]
+}</pre>
+              </details>
             </article>
             
-            <article class="finding">
+            <article class="finding" data-severity="high" data-check="feature_leakage_risk">
               <span class="badge high">high</span>
               <h3>Feature may use post-outcome information</h3>
               <p>urn:li:mlFeature:(user_risk_features,chargeback_resolved_at) contains feature evidence that may be known only after the prediction label is determined.</p>
               
-              <p>Entity <code>urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)</code></p>
+              <p>
+                Entity <code>urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)</code>
+                
+              </p>
               
               
               <p>Remediation: Human review required: confirm the feature is available at prediction time or remove it from model training.</p>
               
+              <details>
+                <summary>Evidence</summary>
+                <pre>{
+  "entity_urn": "urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)",
+  "leakage_evidence": "chargeback_resolved_at postdates label defaulted_30d",
+  "suspicious_fields": [
+    "description"
+  ]
+}</pre>
+              </details>
+            </article>
+            
+            <article class="finding" data-severity="high" data-check="model_performance_regression">
+              <span class="badge high">high</span>
+              <h3>Model performance regressed below baseline</h3>
+              <p>urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD) reports auc=0.841, below baseline 0.890 with tolerance 0.010.</p>
+              
+              <p>
+                Entity <code>urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)</code>
+                
+              </p>
+              
+              
+              <p>Remediation: Review the latest evaluation slice, compare training and serving data, and hold promotion until the metric returns to baseline.</p>
+              
+              <details>
+                <summary>Evidence</summary>
+                <pre>{
+  "baseline": 0.89,
+  "current": 0.841,
+  "entity_urn": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)",
+  "metric": "auc",
+  "tolerance": 0.01
+}</pre>
+              </details>
             </article>
             
           
             
-            <article class="finding">
+            <article class="finding" data-severity="medium" data-check="missing_owner">
               <span class="badge medium">medium</span>
               <h3>Lineage entity has no registered owner</h3>
               <p>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features) appears in the scanned lineage path but has no DataHub owner.</p>
               
-              <p>Entity <code>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)</code></p>
+              <p>
+                Entity <code>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)</code>
+                
+              </p>
               
               
               <p>Remediation: Assign a DataHub owner for this lineage entity.</p>
               
+              <details>
+                <summary>Evidence</summary>
+                <pre>{
+  "entity_urn": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)",
+  "owners": []
+}</pre>
+              </details>
+            </article>
+            
+            <article class="finding" data-severity="medium" data-check="deployment_config_drift">
+              <span class="badge medium">medium</span>
+              <h3>Deployment config drift detected</h3>
+              <p>urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD) is running on ml.t3.medium, but last known-good config expects ml.m5.large.</p>
+              
+              <p>
+                Entity <code>urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)</code>
+                
+              </p>
+              
+              
+              <p>Remediation: Compare the deployment change history, confirm the instance change was approved, or roll back to the last known-good config.</p>
+              
+              <details>
+                <summary>Evidence</summary>
+                <pre>{
+  "actual_instance_type": "ml.t3.medium",
+  "entity_urn": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)",
+  "expected_instance_type": "ml.m5.large"
+}</pre>
+              </details>
             </article>
             
           
             
           
         
+        
       </section>
     </main>
     <script>
-      const graph = {"nodes": [{"id": "urn:li:dataset:(urn:li:dataPlatform:demo,dashboard.risk_ops,PROD)", "label": "dashboard.risk_ops", "title": "<strong>urn:li:dataset:(urn:li:dataPlatform:demo,dashboard.risk_ops,PROD)</strong>", "color": {"background": "#64748b", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}, {"id": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)", "label": "raw_transactions", "title": "<strong>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)</strong><br>CRITICAL: PII flows into model lineage without an approved exception<br>HIGH: Upstream dataset is stale for its declared cadence<br>HIGH: Feature may use post-outcome information", "color": {"background": "#ef4444", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}, {"id": "urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)", "label": "urn:li:mlFeature:(user_risk_features", "title": "<strong>urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)</strong><br>HIGH: Feature may use post-outcome information", "color": {"background": "#f97316", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}, {"id": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)", "label": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo", "title": "<strong>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)</strong><br>HIGH: Upstream schema changed after feature computation<br>CRITICAL: PII flows into model lineage without an approved exception<br>MEDIUM: Lineage entity has no registered owner", "color": {"background": "#ef4444", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}, {"id": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)", "label": "credit_risk_v3", "title": "<strong>urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)</strong>", "color": {"background": "#64748b", "border": "#f8fafc"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 4, "shape": "box"}, {"id": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)", "label": "credit_risk_prod", "title": "<strong>urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)</strong>", "color": {"background": "#64748b", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}], "edges": [{"from": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)", "to": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)", "arrows": "to"}, {"from": "urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)", "to": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)", "arrows": "to"}, {"from": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)", "to": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)", "arrows": "to"}, {"from": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)", "to": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)", "arrows": "to"}, {"from": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)", "to": "urn:li:dataset:(urn:li:dataPlatform:demo,dashboard.risk_ops,PROD)", "arrows": "to"}]};
+      const graph = {"nodes": [{"id": "urn:li:dataset:(urn:li:dataPlatform:demo,dashboard.risk_ops,PROD)", "label": "dashboard.risk_ops", "title": "<strong>urn:li:dataset:(urn:li:dataPlatform:demo,dashboard.risk_ops,PROD)</strong>", "color": {"background": "#64748b", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}, {"id": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)", "label": "raw_transactions", "title": "<strong>urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)</strong><br>CRITICAL: PII flows into model lineage without an approved exception<br>HIGH: Upstream dataset is stale for its declared cadence<br>HIGH: Feature may use post-outcome information", "color": {"background": "#ef4444", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}, {"id": "urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)", "label": "urn:li:mlFeature:(user_risk_features", "title": "<strong>urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)</strong><br>HIGH: Feature may use post-outcome information", "color": {"background": "#f97316", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}, {"id": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)", "label": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo", "title": "<strong>urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)</strong><br>HIGH: Upstream schema changed after feature computation<br>CRITICAL: PII flows into model lineage without an approved exception<br>MEDIUM: Lineage entity has no registered owner", "color": {"background": "#ef4444", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}, {"id": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)", "label": "credit_risk_v3", "title": "<strong>urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)</strong><br>HIGH: Model performance regressed below baseline", "color": {"background": "#f97316", "border": "#f8fafc"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 4, "shape": "box"}, {"id": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)", "label": "credit_risk_prod", "title": "<strong>urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)</strong><br>MEDIUM: Deployment config drift detected", "color": {"background": "#f59e0b", "border": "#0f172a"}, "font": {"color": "#f8fafc", "face": "Inter"}, "borderWidth": 1, "shape": "ellipse"}], "edges": [{"from": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)", "to": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)", "arrows": "to"}, {"from": "urn:li:mlFeature:(user_risk_features,chargeback_resolved_at)", "to": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)", "arrows": "to"}, {"from": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)", "to": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)", "arrows": "to"}, {"from": "urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)", "to": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)", "arrows": "to"}, {"from": "urn:li:mlModelDeployment:(urn:li:dataPlatform:demo,credit_risk_prod,PROD)", "to": "urn:li:dataset:(urn:li:dataPlatform:demo,dashboard.risk_ops,PROD)", "arrows": "to"}]};
       const container = document.getElementById("lineage-graph");
       const data = {
         nodes: new vis.DataSet(graph.nodes),
@@ -246,6 +438,18 @@
         interaction: { hover: true, tooltipDelay: 120 }
       };
       new vis.Network(container, data, options);
+      const severityFilter = document.getElementById("severity-filter");
+      const checkFilter = document.getElementById("check-filter");
+      const findings = [...document.querySelectorAll(".finding")];
+      function applyFilters() {
+        for (const finding of findings) {
+          const severityOk = severityFilter.value === "all" || finding.dataset.severity === severityFilter.value;
+          const checkOk = checkFilter.value === "all" || finding.dataset.check === checkFilter.value;
+          finding.style.display = severityOk && checkOk ? "" : "none";
+        }
+      }
+      severityFilter.addEventListener("change", applyFilters);
+      checkFilter.addEventListener("change", applyFilters);
     </script>
   </body>
 </html>

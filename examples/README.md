@@ -26,5 +26,6 @@ Files:
 - `sample_report.html`: static visual lineage report
 - `sample_report.md`: PR-comment-ready summary
 - `sample_mcp_dryrun.json`: DataHub MCP payloads that would be emitted in dry-run mode
+- `sample_writeback_audit.jsonl`: JSONL audit trail for dry-run write-back decisions
 
 Live DataHub examples can be regenerated with `make demo` on a machine with Docker.
