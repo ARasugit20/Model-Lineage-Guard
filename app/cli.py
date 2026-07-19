@@ -1,5 +1,6 @@
 """Typer command-line interface for Model Lineage Guard."""
 
+import logging
 from enum import StrEnum
 from pathlib import Path
 from typing import Annotated
@@ -14,13 +15,20 @@ from app.demo_context import demo_scan_context
 from app.findings import RiskReport
 from app.report import render_html, render_json, render_markdown
 from app.writeback import apply as apply_writeback
-from app.writeback import build_mcps, human_review_findings, render_mcp_json
+from app.writeback import (
+    build_mcps,
+    human_review_findings,
+    mcps_to_dicts,
+    render_mcp_json,
+    write_audit_log,
+)
 
 app = typer.Typer(
     name="mlguard",
     help="Inspect DataHub ML lineage for production risk signals.",
     no_args_is_help=True,
 )
+LOGGER = logging.getLogger(__name__)
 
 
 class WriteBackMode(StrEnum):
@@ -43,8 +51,16 @@ def main(
         bool | None,
         typer.Option("--version", callback=_version_callback, help="Show the installed version."),
     ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option("--verbose", "--debug", help="Enable debug logging."),
+    ] = False,
 ) -> None:
     """Run Model Lineage Guard commands."""
+    logging.basicConfig(
+        level=logging.DEBUG if verbose else logging.WARNING,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
 
 
 @app.command()
@@ -62,11 +78,24 @@ def scan(
         bool,
         typer.Option("--confirm", help="Required with --write-back apply."),
     ] = False,
+    max_depth: Annotated[
+        int,
+        typer.Option("--max-depth", help="Maximum upstream lineage depth to scan."),
+    ] = 4,
+    max_breadth: Annotated[
+        int,
+        typer.Option("--max-breadth", help="Maximum lineage edges per node to scan."),
+    ] = 100,
 ) -> None:
     """Scan one DataHub entity for lineage risks."""
     _validate_urn(urn)
     client = DataHubClient()
-    context = _load_scan_context(client, urn)
+    context = _load_scan_context(
+        client,
+        urn,
+        upstream_depth=max_depth,
+        max_breadth=max_breadth,
+    )
     _complete_scan(
         client=client,
         context=context,
@@ -90,6 +119,14 @@ def scan_all(
         bool,
         typer.Option("--confirm", help="Required with --write-back apply."),
     ] = False,
+    max_depth: Annotated[
+        int,
+        typer.Option("--max-depth", help="Maximum upstream lineage depth to scan."),
+    ] = 4,
+    max_breadth: Annotated[
+        int,
+        typer.Option("--max-breadth", help="Maximum lineage edges per node to scan."),
+    ] = 100,
 ) -> None:
     """Scan all DataHub ML models visible to the configured client."""
     client = DataHubClient()
@@ -99,7 +136,12 @@ def scan_all(
     for model in models:
         typer.echo(f"  {model}")
         model_out = out / _safe_dir_name(model)
-        context = _load_scan_context(client, model)
+        context = _load_scan_context(
+            client,
+            model,
+            upstream_depth=max_depth,
+            max_breadth=max_breadth,
+        )
         _complete_scan(
             client=client,
             context=context,
@@ -159,14 +201,28 @@ def _complete_scan(
     )
     mcps = build_mcps(report) if write_back != WriteBackMode.OFF else []
     mcp_path = render_mcp_json(mcps, out) if write_back == WriteBackMode.DRY_RUN else None
+    audit_path = None
+    if write_back == WriteBackMode.DRY_RUN:
+        audit_path = write_audit_log(
+            mcps=mcps,
+            out_dir=out,
+            mode="dry-run",
+            outcome="previewed",
+        )
     emitted = []
     if write_back == WriteBackMode.APPLY:
         if client is None:
             raise typer.BadParameter("A live DataHub client is required for write-back apply.")
-        emitted = apply_writeback(client, mcps)
+        emitted = apply_writeback(client, mcps, audit_dir=out)
 
     json_path = render_json(report, out)
-    html_path = render_html(report, lineage, out)
+    html_path = render_html(
+        report,
+        lineage,
+        out,
+        mcp_payloads=mcps_to_dicts(mcps),
+        datahub_base_url=client.settings.gms_host if client else None,
+    )
     markdown_path = render_markdown(report, out)
 
     typer.echo(f"Target: {target_urn}")
@@ -180,6 +236,8 @@ def _complete_scan(
     typer.echo(f"PR comment: {markdown_path}")
     if mcp_path:
         typer.echo(f"Write-back dry-run MCP JSON: {mcp_path}")
+    if audit_path:
+        typer.echo(f"Write-back audit log: {audit_path}")
     if human_review_findings(report):
         typer.echo("Human-review-only findings excluded from write-back:")
         for finding in human_review_findings(report):
@@ -200,10 +258,21 @@ def _validate_urn(urn: str) -> None:
         raise typer.BadParameter("Expected a DataHub URN starting with 'urn:li:'.")
 
 
-def _load_scan_context(client: DataHubClient, urn: str) -> dict[str, object]:
+def _load_scan_context(
+    client: DataHubClient,
+    urn: str,
+    *,
+    upstream_depth: int = 4,
+    max_breadth: int = 100,
+) -> dict[str, object]:
     try:
-        return client.scan_context(urn)
+        return client.scan_context(
+            urn,
+            upstream_depth=upstream_depth,
+            max_breadth=max_breadth,
+        )
     except Exception as exc:
+        LOGGER.debug("DataHub scan context load failed", exc_info=exc)
         raise ClickException(
             f"Could not read DataHub lineage for {urn} at {client.settings.gms_host}. "
             "Is DataHub running, and are DATAHUB_GMS_HOST/DATAHUB_TOKEN correct?"
