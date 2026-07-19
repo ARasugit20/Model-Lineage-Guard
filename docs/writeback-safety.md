@@ -24,3 +24,5 @@ Dry-run mode writes JSON payloads without emitting to DataHub:
 ```bash
 mlguard scan '<urn>' --write-back dry-run
 ```
+
+Every dry-run and apply action writes an audit record to `writeback_audit.jsonl` in the output directory.

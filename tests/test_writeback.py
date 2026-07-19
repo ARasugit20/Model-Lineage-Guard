@@ -3,7 +3,14 @@
 from unittest.mock import Mock
 
 from app.findings import Finding, RiskReport, Severity
-from app.writeback import apply, build_mcps, human_review_findings, render_mcp_json
+from app.writeback import (
+    WriteBackPolicy,
+    apply,
+    build_mcps,
+    human_review_findings,
+    render_mcp_json,
+    write_audit_log,
+)
 
 
 def test_build_mcps_maps_findings_to_risk_tags() -> None:
@@ -33,6 +40,35 @@ def test_build_mcps_maps_findings_to_risk_tags() -> None:
     assert mcps[1].entityUrn == report.target_urn
     assert mcps[0].aspect.tags[0].tag == "urn:li:tag:risk:schema-drift"
     assert mcps[1].aspect.tags[0].tag == "urn:li:tag:risk:pii-exposure"
+
+
+def test_build_mcps_uses_policy_threshold(tmp_path) -> None:
+    policy_path = tmp_path / "policy.json"
+    policy_path.write_text(
+        """
+        {
+          "minimum_severity": "critical",
+          "allowed_entity_types": ["mlModel"],
+          "checks": {
+            "missing_owner": {"mode": "auto_apply", "tag": "risk:missing-owner"}
+          }
+        }
+        """,
+        encoding="utf-8",
+    )
+    report = RiskReport(
+        target_urn="urn:li:mlModel:(demo,credit_risk_v3,PROD)",
+        findings=[
+            Finding(
+                check_name="missing_owner",
+                severity=Severity.MEDIUM,
+                title="Missing owner",
+                explanation="No owner.",
+            )
+        ],
+    )
+
+    assert build_mcps(report, WriteBackPolicy.load(policy_path)) == []
 
 
 def test_apply_emits_every_mcp() -> None:
@@ -99,3 +135,28 @@ def test_render_mcp_json_writes_dry_run_without_emitting(tmp_path) -> None:
 
     assert "risk:missing-owner" in path.read_text(encoding="utf-8")
     client.graph.emit_mcp.assert_not_called()
+
+
+def test_write_audit_log_records_writeback_decisions(tmp_path) -> None:
+    report = RiskReport(
+        target_urn="urn:li:mlModel:(demo,credit_risk_v3,PROD)",
+        findings=[
+            Finding(
+                check_name="missing_owner",
+                severity=Severity.MEDIUM,
+                title="Missing owner",
+                explanation="No owner.",
+            )
+        ],
+    )
+
+    path = write_audit_log(
+        mcps=build_mcps(report),
+        out_dir=tmp_path,
+        mode="dry-run",
+        outcome="previewed",
+    )
+
+    text = path.read_text(encoding="utf-8")
+    assert "previewed" in text
+    assert "globalTags" in text

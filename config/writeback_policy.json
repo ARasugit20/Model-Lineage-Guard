@@ -1,0 +1,34 @@
+{
+  "minimum_severity": "medium",
+  "allowed_entity_types": ["dataset", "mlFeatureTable", "mlModel", "mlModelDeployment"],
+  "checks": {
+    "schema_drift": {
+      "mode": "auto_apply",
+      "tag": "risk:schema-drift"
+    },
+    "pii_exposure": {
+      "mode": "auto_apply",
+      "tag": "risk:pii-exposure"
+    },
+    "missing_owner": {
+      "mode": "auto_apply",
+      "tag": "risk:missing-owner"
+    },
+    "stale_dataset": {
+      "mode": "human_review_only",
+      "tag": "risk:stale-dataset"
+    },
+    "feature_leakage_risk": {
+      "mode": "human_review_only",
+      "tag": "risk:feature-leakage"
+    },
+    "model_performance_regression": {
+      "mode": "human_review_only",
+      "tag": "risk:model-performance-regression"
+    },
+    "deployment_config_drift": {
+      "mode": "human_review_only",
+      "tag": "risk:deployment-config-drift"
+    }
+  }
+}
