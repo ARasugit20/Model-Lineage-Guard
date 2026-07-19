@@ -1,9 +1,16 @@
-.PHONY: test demo demo-offline
+.PHONY: test demo demo-offline examples env-check
 
 test:
 	ruff check .
 	mypy app/
 	pytest -q
+
+env-check:
+	python3 scripts/check_environment.py
+
+examples:
+	python3 scripts/generate_examples.py
+	python3 scripts/validate_examples.py
 
 demo:
 	datahub docker quickstart
@@ -13,3 +20,4 @@ demo:
 
 demo-offline:
 	mlguard demo-report --out examples --write-back dry-run
+	python3 scripts/validate_examples.py
