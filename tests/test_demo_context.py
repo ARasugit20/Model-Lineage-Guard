@@ -13,6 +13,8 @@ def test_demo_context_triggers_all_core_checks() -> None:
         "stale_dataset",
         "missing_owner",
         "feature_leakage_risk",
+        "model_performance_regression",
+        "deployment_config_drift",
     }
 
 

@@ -99,7 +99,13 @@ def demo_scan_context() -> dict[str, Any]:
                 "dataset": {},
                 "model": {
                     "name": "credit_risk_v3",
-                    "customProperties": {"mlguard.production": "true"},
+                    "customProperties": {
+                        "mlguard.production": "true",
+                        "mlguard.performance_metric": "auc",
+                        "mlguard.baseline_metric_value": "0.890",
+                        "mlguard.current_metric_value": "0.841",
+                        "mlguard.performance_tolerance": "0.010",
+                    },
                 },
                 "deployment": {},
                 "owners": ["urn:li:corpuser:risk-ml-owner"],
@@ -109,7 +115,13 @@ def demo_scan_context() -> dict[str, Any]:
                 "urn": DEPLOYMENT_URN,
                 "dataset": {},
                 "model": {},
-                "deployment": {"customProperties": {"mlguard.production": "true"}},
+                "deployment": {
+                    "customProperties": {
+                        "mlguard.production": "true",
+                        "mlguard.expected_instance_type": "ml.m5.large",
+                        "mlguard.actual_instance_type": "ml.t3.medium",
+                    }
+                },
                 "owners": ["urn:li:corpuser:risk-platform-owner"],
                 "schema": [],
             },
