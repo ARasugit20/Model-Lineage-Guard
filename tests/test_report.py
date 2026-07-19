@@ -39,6 +39,7 @@ def test_render_html_writes_graph_report(tmp_path) -> None:
                 title="Missing owner",
                 explanation="Feature table has no owner.",
                 entity_urn="urn:li:mlFeatureTable:(demo,user_risk_features)",
+                remediation="Assign an owner.",
             )
         ],
     )
@@ -52,13 +53,23 @@ def test_render_html_writes_graph_report(tmp_path) -> None:
         "downstream": [],
     }
 
-    path = render_html(report, lineage, tmp_path)
+    path = render_html(
+        report,
+        lineage,
+        tmp_path,
+        mcp_payloads=[{"entityUrn": "urn:li:mlFeatureTable:(demo,user_risk_features)"}],
+        datahub_base_url="http://localhost:9002",
+    )
     html = path.read_text(encoding="utf-8")
 
     assert path.name == "report.html"
     assert "vis-network" in html
     assert "Model Lineage Guard" in html
     assert "Missing owner" in html
+    assert "severity-filter" in html
+    assert "Remediation" in html
+    assert "Open in DataHub" in html
+    assert "Write-Back MCP Preview" in html
 
 
 def test_render_markdown_writes_pr_comment(tmp_path) -> None:

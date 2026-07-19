@@ -74,6 +74,30 @@
         padding: 14px;
         margin-bottom: 12px;
       }
+      .filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .filters select {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        color: var(--text);
+        padding: 8px;
+      }
+      details {
+        border-top: 1px solid var(--line);
+        margin-top: 10px;
+        padding-top: 10px;
+      }
+      pre {
+        background: #020617;
+        border: 1px solid var(--line);
+        overflow: auto;
+        padding: 10px;
+        white-space: pre-wrap;
+      }
       .finding h3 { font-size: 15px; margin-bottom: 8px; }
       .finding p { color: var(--muted); line-height: 1.45; }
       .badge {
@@ -116,6 +140,20 @@
           off
           {% endif %}
         </p>
+        <div class="filters">
+          <select id="severity-filter" aria-label="Filter by severity">
+            <option value="all">All severities</option>
+            {% for severity in severity_order %}
+            <option value="{{ severity }}">{{ severity }}</option>
+            {% endfor %}
+          </select>
+          <select id="check-filter" aria-label="Filter by check">
+            <option value="all">All checks</option>
+            {% for check_name in check_names %}
+            <option value="{{ check_name }}">{{ check_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
         <div class="score-strip">
           {% for severity in severity_order %}
           <div class="score">
@@ -127,16 +165,25 @@
         {% if report.findings %}
           {% for severity in severity_order %}
             {% for finding in findings_by_severity[severity] %}
-            <article class="finding">
+            <article class="finding" data-severity="{{ severity }}" data-check="{{ finding.check_name }}">
               <span class="badge {{ severity }}">{{ severity }}</span>
               <h3>{{ finding.title }}</h3>
               <p>{{ finding.explanation }}</p>
               {% if finding.entity_urn %}
-              <p>Entity <code>{{ finding.entity_urn }}</code></p>
+              <p>
+                Entity <code>{{ finding.entity_urn }}</code>
+                {% if datahub_base_url %}
+                <a href="{{ datahub_base_url }}/{{ finding.entity_urn }}" target="_blank" rel="noreferrer">Open in DataHub</a>
+                {% endif %}
+              </p>
               {% endif %}
               {% if finding.remediation %}
               <p>Remediation: {{ finding.remediation }}</p>
               {% endif %}
+              <details>
+                <summary>Evidence</summary>
+                <pre>{{ finding.evidence | tojson(indent=2) }}</pre>
+              </details>
             </article>
             {% endfor %}
           {% endfor %}
@@ -144,6 +191,10 @@
           <div class="empty">
             No risks detected across the scanned lineage neighborhood.
           </div>
+        {% endif %}
+        {% if mcp_payloads %}
+        <h2>Write-Back MCP Preview</h2>
+        <pre>{{ mcp_payloads | tojson(indent=2) }}</pre>
         {% endif %}
       </section>
     </main>
@@ -161,6 +212,18 @@
         interaction: { hover: true, tooltipDelay: 120 }
       };
       new vis.Network(container, data, options);
+      const severityFilter = document.getElementById("severity-filter");
+      const checkFilter = document.getElementById("check-filter");
+      const findings = [...document.querySelectorAll(".finding")];
+      function applyFilters() {
+        for (const finding of findings) {
+          const severityOk = severityFilter.value === "all" || finding.dataset.severity === severityFilter.value;
+          const checkOk = checkFilter.value === "all" || finding.dataset.check === checkFilter.value;
+          finding.style.display = severityOk && checkOk ? "" : "none";
+        }
+      }
+      severityFilter.addEventListener("change", applyFilters);
+      checkFilter.addEventListener("change", applyFilters);
     </script>
   </body>
 </html>

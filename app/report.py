@@ -22,7 +22,14 @@ def render_json(report: RiskReport, out_dir: Path) -> Path:
     return path
 
 
-def render_html(report: RiskReport, lineage_graph: dict[str, Any], out_dir: Path) -> Path:
+def render_html(
+    report: RiskReport,
+    lineage_graph: dict[str, Any],
+    out_dir: Path,
+    *,
+    mcp_payloads: list[dict[str, Any]] | None = None,
+    datahub_base_url: str | None = None,
+) -> Path:
     """Write a self-contained judge-facing HTML risk report."""
     out_dir.mkdir(parents=True, exist_ok=True)
     template_dir = Path(__file__).parent / "templates"
@@ -36,7 +43,10 @@ def render_html(report: RiskReport, lineage_graph: dict[str, Any], out_dir: Path
         report=report.to_dict(),
         findings_by_severity=_group_findings(report.findings),
         graph_json=json.dumps(graph),
+        mcp_payloads=mcp_payloads or [],
+        datahub_base_url=(datahub_base_url or "").rstrip("/"),
         severity_order=[severity.value for severity in _SEVERITY_ORDER],
+        check_names=sorted({finding.check_name for finding in report.findings}),
     )
     path = out_dir / "report.html"
     path.write_text(html, encoding="utf-8")
