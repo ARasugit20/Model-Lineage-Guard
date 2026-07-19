@@ -11,6 +11,7 @@ env-check:
 examples:
 	python3 scripts/generate_examples.py
 	python3 scripts/validate_examples.py
+	python3 scripts/validate_artifacts.py examples
 
 demo:
 	datahub docker quickstart

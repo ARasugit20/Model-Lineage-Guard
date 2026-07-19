@@ -17,3 +17,20 @@ jobs:
       - run: ruff check .
       - run: mypy app/
       - run: pytest -q
+
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - run: datahub docker quickstart
+      - run: python scripts/seed_demo_lineage.py
+      - run: mlguard demo-report --out out/demo --write-back dry-run
+      - run: mlguard scan 'urn:li:mlModel:(urn:li:dataPlatform:demo,credit_risk_v3,PROD)' --out out/live --write-back dry-run
+      - run: python scripts/validate_artifacts.py out/demo
+      - run: python scripts/validate_artifacts.py out/live

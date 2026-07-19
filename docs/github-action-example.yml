@@ -1,0 +1,18 @@
+name: Model Lineage Guard
+
+on:
+  pull_request:
+
+jobs:
+  mlguard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install model-lineage-guard
+      - run: mlguard scan "${{ vars.DATAHUB_TARGET_URN }}" --out out/mlguard --write-back dry-run
+        env:
+          DATAHUB_GMS_HOST: ${{ vars.DATAHUB_GMS_HOST }}
+          DATAHUB_TOKEN: ${{ secrets.DATAHUB_TOKEN }}
