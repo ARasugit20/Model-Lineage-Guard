@@ -144,3 +144,10 @@ Unit tests mock DataHub metadata and do not require a live DataHub instance. Liv
 - Next: live DataHub integration test, configuration file for check thresholds, extra governance/model-eval checks, lineage caching and pagination.
 
 Out of scope: multi-tenant auth, raw warehouse connectors, and a persistent database. DataHub is the source of truth.
+
+Additional docs:
+
+- [Architecture](docs/architecture.md)
+- [Write-back safety](docs/writeback-safety.md)
+- [Live DataHub verification](docs/live-datahub-verification.md)
+- [Submission checklist](docs/submission-checklist.md)
