@@ -256,11 +256,6 @@ def seed(graph: DataHubGraph) -> DemoUrns:
             },
         ),
     )
-    _emit(
-        graph,
-        urns.credit_risk_model,
-        _upstream(urns.user_risk_features, urns.chargeback_resolved_feature),
-    )
     _emit(graph, urns.credit_risk_model, _ownership("risk-ml-owner"))
     _emit(graph, urns.credit_risk_model, _tags("mlguard-demo", "production-model"))
 
