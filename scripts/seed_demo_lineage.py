@@ -206,6 +206,7 @@ def seed(graph: DataHubGraph) -> DemoUrns:
         urns.user_risk_features,
         MLFeatureTablePropertiesClass(
             description="Feature table consumed by the credit risk model.",
+            mlFeatures=[urns.chargeback_resolved_feature],
             customProperties={
                 "mlguard.last_recomputed_at": "2026-07-09T01:00:00Z",
                 "mlguard.expected_upstream_schema": "raw_transactions.customer_id:int",
@@ -214,7 +215,6 @@ def seed(graph: DataHubGraph) -> DemoUrns:
             },
         ),
     )
-    _emit(graph, urns.user_risk_features, _upstream(urns.raw_transactions))
     _emit(graph, urns.user_risk_features, _tags("mlguard-demo", "feature-table"))
     # No ownership aspect on this entity: deliberately bakes in the missing owner risk.
 
