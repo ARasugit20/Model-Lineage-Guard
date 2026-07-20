@@ -269,7 +269,6 @@ def seed(graph: DataHubGraph) -> DemoUrns:
             customProperties={"mlguard.production": "true"},
         ),
     )
-    _emit(graph, urns.credit_risk_deployment, _upstream(urns.credit_risk_model))
     _emit(graph, urns.credit_risk_deployment, _ownership("risk-platform-owner"))
     _emit(graph, urns.credit_risk_deployment, _tags("mlguard-demo", "production-deployment"))
 
