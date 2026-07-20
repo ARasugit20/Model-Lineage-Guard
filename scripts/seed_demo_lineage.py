@@ -265,7 +265,7 @@ def seed(graph: DataHubGraph) -> DemoUrns:
         MLModelDeploymentPropertiesClass(
             description="Production deployment for real-time credit risk scoring.",
             createdAt=int(time.time() * 1000),
-            status="ACTIVE",
+            status="IN_SERVICE",
             customProperties={"mlguard.production": "true"},
         ),
     )
