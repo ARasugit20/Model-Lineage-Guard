@@ -8,6 +8,7 @@ from dataclasses import dataclass
 
 from datahub.emitter.mce_builder import (
     OwnerType,
+    make_data_platform_urn,
     make_dataset_urn,
     make_ml_feature_table_urn,
     make_ml_feature_urn,
@@ -127,7 +128,7 @@ def _field(
 def _schema(name: str, fields: list[SchemaFieldClass]) -> SchemaMetadataClass:
     return SchemaMetadataClass(
         schemaName=name,
-        platform=PLATFORM,
+        platform=make_data_platform_urn(PLATFORM),
         version=0,
         hash=f"mlguard-demo-{name}",
         platformSchema=OtherSchemaClass(

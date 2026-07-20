@@ -422,6 +422,50 @@
           
         
         
+        <h2>Write-Back MCP Preview</h2>
+        <pre>[
+  {
+    "aspect": {
+      "contentType": "application/json",
+      "value": "{\"tags\": [{\"tag\": \"urn:li:tag:risk:schema-drift\"}]}"
+    },
+    "aspectName": "globalTags",
+    "changeType": "UPSERT",
+    "entityType": "mlFeatureTable",
+    "entityUrn": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)"
+  },
+  {
+    "aspect": {
+      "contentType": "application/json",
+      "value": "{\"tags\": [{\"tag\": \"urn:li:tag:risk:pii-exposure\"}]}"
+    },
+    "aspectName": "globalTags",
+    "changeType": "UPSERT",
+    "entityType": "dataset",
+    "entityUrn": "urn:li:dataset:(urn:li:dataPlatform:demo,raw_transactions,PROD)"
+  },
+  {
+    "aspect": {
+      "contentType": "application/json",
+      "value": "{\"tags\": [{\"tag\": \"urn:li:tag:risk:pii-exposure\"}]}"
+    },
+    "aspectName": "globalTags",
+    "changeType": "UPSERT",
+    "entityType": "mlFeatureTable",
+    "entityUrn": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)"
+  },
+  {
+    "aspect": {
+      "contentType": "application/json",
+      "value": "{\"tags\": [{\"tag\": \"urn:li:tag:risk:missing-owner\"}]}"
+    },
+    "aspectName": "globalTags",
+    "changeType": "UPSERT",
+    "entityType": "mlFeatureTable",
+    "entityUrn": "urn:li:mlFeatureTable:(urn:li:dataPlatform:demo,user_risk_features)"
+  }
+]</pre>
+        
       </section>
     </main>
     <script>
