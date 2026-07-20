@@ -130,6 +130,9 @@ class DataHubClient:
     def get_schema(self, urn: str) -> list[dict[str, Any]]:
         """Return schema fields for a dataset-like entity."""
         schema = self._call_with_retry(self.graph.get_aspect, urn, SchemaMetadataClass)
+        return self._schema_fields(schema)
+
+    def _schema_fields(self, schema: SchemaMetadataClass | None) -> list[dict[str, Any]]:
         if not schema:
             return []
         return [
@@ -265,17 +268,40 @@ class DataHubClient:
         raise RuntimeError("DataHub SDK call failed without an exception.")
 
     def describe_entity(self, urn: str) -> dict[str, Any]:
-        """Return a compact metadata description for any supported entity URN."""
+        """Return a compact metadata description for any supported entity URN.
+
+        Fetches all needed aspects in a single request instead of one
+        get_aspect call per aspect, since scan_context calls this once per
+        entity in a lineage neighborhood.
+        """
+        bag = self._call_with_retry(
+            self.graph.get_entity_semityped,
+            urn,
+            aspects=[
+                DatasetPropertiesClass.get_aspect_name(),
+                MLModelPropertiesClass.get_aspect_name(),
+                MLModelDeploymentPropertiesClass.get_aspect_name(),
+                OwnershipClass.get_aspect_name(),
+                SchemaMetadataClass.get_aspect_name(),
+                GlobalTagsClass.get_aspect_name(),
+                GlossaryTermsClass.get_aspect_name(),
+                UpstreamLineageClass.get_aspect_name(),
+            ],
+        )
+        ownership = bag.get("ownership")
+        schema = bag.get("schemaMetadata")
+        tags = bag.get("globalTags")
+        glossary_terms = bag.get("glossaryTerms")
         return {
             "urn": urn,
-            "dataset": self.get_dataset(urn),
-            "model": self.get_model(urn),
-            "deployment": self.get_deployment(urn),
-            "owners": self.get_owners(urn),
-            "schema": self.get_schema(urn),
-            "tags": self.get_tags(urn),
-            "glossary_terms": self.get_glossary_terms(urn),
-            "upstream_lineage": self.get_upstream_lineage(urn),
+            "dataset": self._aspect_to_dict(bag.get("datasetProperties")),
+            "model": self._aspect_to_dict(bag.get("mlModelProperties")),
+            "deployment": self._aspect_to_dict(bag.get("mlModelDeploymentProperties")),
+            "owners": [owner.owner for owner in ownership.owners] if ownership else [],
+            "schema": self._schema_fields(schema),
+            "tags": [tag.tag for tag in tags.tags] if tags else [],
+            "glossary_terms": [term.urn for term in glossary_terms.terms] if glossary_terms else [],
+            "upstream_lineage": self._aspect_to_dict(bag.get("upstreamLineage")),
         }
 
     @staticmethod
