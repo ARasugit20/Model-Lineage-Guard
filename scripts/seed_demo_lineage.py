@@ -233,7 +233,6 @@ def seed(graph: DataHubGraph) -> DemoUrns:
             },
         ),
     )
-    _emit(graph, urns.chargeback_resolved_feature, _upstream(urns.raw_transactions))
     _emit(graph, urns.chargeback_resolved_feature, _ownership("risk-ml-owner"))
     _emit(graph, urns.chargeback_resolved_feature, _tags("mlguard-demo", "leakage-risk"))
 
