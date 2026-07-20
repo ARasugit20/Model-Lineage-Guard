@@ -28,11 +28,19 @@ class SchemaDriftCheck(Check):
             if entity_properties(entity).get("mlguard.expected_upstream_schema")
         ]
 
+        consumers_with_recompute_time = [
+            (
+                consumer_urn,
+                consumer_props,
+                _parse_time(consumer_props.get("mlguard.last_recomputed_at")),
+            )
+            for consumer_urn, _consumer, consumer_props in consumers
+        ]
+
         findings: list[Finding] = []
         for source_urn, _source, source_props in changed_sources:
             changed_at = _parse_time(source_props.get("mlguard.schema_changed_at"))
-            for consumer_urn, _consumer, consumer_props in consumers:
-                recomputed_at = _parse_time(consumer_props.get("mlguard.last_recomputed_at"))
+            for consumer_urn, consumer_props, recomputed_at in consumers_with_recompute_time:
                 if changed_at and recomputed_at and recomputed_at >= changed_at:
                     continue
                 findings.append(
