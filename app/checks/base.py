@@ -1,6 +1,6 @@
 """Shared protocol for lineage risk checks."""
 
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from app.findings import Finding
 
@@ -17,11 +17,16 @@ class Check(Protocol):
 
 def entity_properties(entity: dict[str, Any]) -> dict[str, str]:
     """Return merged custom properties across supported DataHub aspect shapes."""
+    cached = entity.get("_mlguard_entity_properties")
+    if isinstance(cached, dict):
+        return cast(dict[str, str], cached)
+
     properties: dict[str, str] = {}
     for aspect_name in ("dataset", "model", "deployment"):
         aspect = entity.get(aspect_name) or {}
         custom = aspect.get("customProperties") or {}
         properties.update({str(key): str(value) for key, value in custom.items()})
+    entity["_mlguard_entity_properties"] = properties
     return properties
 
 
