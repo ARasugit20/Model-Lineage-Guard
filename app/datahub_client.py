@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -94,6 +95,11 @@ class DataHubClient:
         max_breadth: int = 100,
     ) -> list[dict[str, Any]]:
         """Return direct lineage edges around an entity."""
+        if max_breadth <= 0:
+            return []
+        if hasattr(self.graph, "scroll_lineage"):
+            return self._get_lineage_with_scroll(urn, direction, max_breadth=max_breadth)
+
         relationship_direction = (
             RelationshipDirection.INCOMING
             if direction == "upstream"
@@ -114,6 +120,58 @@ class DataHubClient:
             for index, related in enumerate(relationships)
             if index < max_breadth
         ]
+
+    def _get_lineage_with_scroll(
+        self,
+        urn: str,
+        direction: Direction,
+        *,
+        max_breadth: int,
+    ) -> list[dict[str, Any]]:
+        """Return direct lineage edges using DataHub's paginated lineage scroll endpoint."""
+        edges: list[dict[str, Any]] = []
+        scroll_id: str | None = None
+        while len(edges) < max_breadth:
+            remaining = max_breadth - len(edges)
+            if direction == "upstream":
+                result = self._call_with_retry(
+                    self.graph.scroll_lineage,
+                    relationship_types=["DownstreamOf"],
+                    destination_urns=[urn],
+                    count=remaining,
+                    scroll_id=scroll_id,
+                )
+            else:
+                result = self._call_with_retry(
+                    self.graph.scroll_lineage,
+                    relationship_types=["DownstreamOf"],
+                    source_urns=[urn],
+                    count=remaining,
+                    scroll_id=scroll_id,
+                )
+            relationships = getattr(result, "relationships", []) or []
+            for relationship in relationships:
+                edges.append(self._relationship_to_edge(relationship, direction))
+                if len(edges) >= max_breadth:
+                    break
+            scroll_id = getattr(result, "scroll_id", None)
+            if not scroll_id or not relationships:
+                break
+        return edges
+
+    @staticmethod
+    def _relationship_to_edge(relationship: Any, direction: Direction) -> dict[str, Any]:
+        if direction == "upstream":
+            return {
+                "urn": getattr(relationship, "source_urn", None),
+                "type": getattr(relationship, "source_entity_type", None),
+                "relationship": getattr(relationship, "relationship_type", None),
+            }
+        return {
+            "urn": getattr(relationship, "destination_urn", None),
+            "type": getattr(relationship, "destination_entity_type", None),
+            "relationship": getattr(relationship, "relationship_type", None),
+        }
 
     def get_upstream_lineage(self, urn: str) -> dict[str, Any]:
         """Return the raw upstreamLineage aspect for an entity, if present."""
@@ -189,17 +247,20 @@ class DataHubClient:
         max_breadth: int = 100,
     ) -> dict[str, Any]:
         """Collect the metadata bundle that later risk checks will consume."""
+        lineage_cache: dict[tuple[str, Direction], list[dict[str, Any]]] = {}
         upstreams = self._walk_lineage(
             urn,
             "upstream",
             max_depth=upstream_depth,
             max_breadth=max_breadth,
+            lineage_cache=lineage_cache,
         )
         downstreams = self._walk_lineage(
             urn,
             "downstream",
             max_depth=downstream_depth,
             max_breadth=max_breadth,
+            lineage_cache=lineage_cache,
         )
         related_urns = [edge["urn"] for edge in upstreams + downstreams if edge.get("urn")]
         related_urns.append(urn)
@@ -228,17 +289,29 @@ class DataHubClient:
         direction: Direction,
         max_depth: int,
         max_breadth: int,
+        lineage_cache: dict[tuple[str, Direction], list[dict[str, Any]]] | None = None,
     ) -> list[dict[str, Any]]:
         """Walk lineage edges breadth-first to collect a compact neighborhood."""
         seen: set[str] = {urn}
-        frontier = [(urn, 0)]
+        frontier = deque([(urn, 0)])
         edges: list[dict[str, Any]] = []
+        lineage_cache = lineage_cache if lineage_cache is not None else {}
+
+        def get_cached_lineage(entity_urn: str) -> list[dict[str, Any]]:
+            cache_key = (entity_urn, direction)
+            if cache_key not in lineage_cache:
+                lineage_cache[cache_key] = self.get_lineage(
+                    entity_urn,
+                    direction,
+                    max_breadth=max_breadth,
+                )
+            return [dict(edge) for edge in lineage_cache[cache_key]]
 
         while frontier:
-            current_urn, depth = frontier.pop(0)
+            current_urn, depth = frontier.popleft()
             if depth >= max_depth:
                 continue
-            for edge in self.get_lineage(current_urn, direction, max_breadth=max_breadth):
+            for edge in get_cached_lineage(current_urn):
                 related_urn = edge.get("urn")
                 if not related_urn:
                     continue
