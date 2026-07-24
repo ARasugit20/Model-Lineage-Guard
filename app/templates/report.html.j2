@@ -74,6 +74,7 @@
         padding: 14px;
         margin-bottom: 12px;
       }
+      .finding.is-hidden { display: none; }
       .filters {
         display: flex;
         flex-wrap: wrap;
@@ -215,12 +216,21 @@
       const severityFilter = document.getElementById("severity-filter");
       const checkFilter = document.getElementById("check-filter");
       const findings = [...document.querySelectorAll(".finding")];
+      let filterFrame = 0;
       function applyFilters() {
-        for (const finding of findings) {
-          const severityOk = severityFilter.value === "all" || finding.dataset.severity === severityFilter.value;
-          const checkOk = checkFilter.value === "all" || finding.dataset.check === checkFilter.value;
-          finding.style.display = severityOk && checkOk ? "" : "none";
+        if (filterFrame) {
+          cancelAnimationFrame(filterFrame);
         }
+        const severity = severityFilter.value;
+        const check = checkFilter.value;
+        filterFrame = requestAnimationFrame(() => {
+          for (const finding of findings) {
+            const severityOk = severity === "all" || finding.dataset.severity === severity;
+            const checkOk = check === "all" || finding.dataset.check === check;
+            finding.classList.toggle("is-hidden", !(severityOk && checkOk));
+          }
+          filterFrame = 0;
+        });
       }
       severityFilter.addEventListener("change", applyFilters);
       checkFilter.addEventListener("change", applyFilters);

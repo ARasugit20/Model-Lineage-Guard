@@ -67,6 +67,9 @@ def test_render_html_writes_graph_report(tmp_path) -> None:
     assert "Model Lineage Guard" in html
     assert "Missing owner" in html
     assert "severity-filter" in html
+    assert "requestAnimationFrame" in html
+    assert "classList.toggle(\"is-hidden\"" in html
+    assert "style.display" not in html
     assert "Remediation" in html
     assert "Open in DataHub" in html
     assert "Write-Back MCP Preview" in html
