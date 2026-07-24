@@ -204,6 +204,12 @@ class DataHubClient:
         related_urns = [edge["urn"] for edge in upstreams + downstreams if edge.get("urn")]
         related_urns.append(urn)
         unique_urns = sorted(set(related_urns))
+        entity_cache: dict[str, dict[str, Any]] = {}
+
+        def describe_once(entity_urn: str) -> dict[str, Any]:
+            if entity_urn not in entity_cache:
+                entity_cache[entity_urn] = self.describe_entity(entity_urn)
+            return entity_cache[entity_urn]
 
         return {
             "target_urn": urn,
@@ -213,9 +219,7 @@ class DataHubClient:
                 "downstream": downstreams,
                 "raw_upstream_aspect": self.get_upstream_lineage(urn),
             },
-            "entities": {
-                entity_urn: self.describe_entity(entity_urn) for entity_urn in unique_urns
-            },
+            "entities": {entity_urn: describe_once(entity_urn) for entity_urn in unique_urns},
         }
 
     def _walk_lineage(
