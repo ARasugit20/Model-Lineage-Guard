@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.checks.base import Check, lineage_entities
+from app.checks.base import Check, entity_type_index, lineage_entities_by_type
 from app.findings import Finding, Severity
 
 
@@ -16,7 +16,8 @@ class MissingOwnerCheck(Check):
 
     def run(self, context: dict[str, Any]) -> list[Finding]:
         findings: list[Finding] = []
-        for urn, entity in lineage_entities(context).items():
+        entity_types = tuple(entity_type_index(context))
+        for urn, entity in lineage_entities_by_type(context, *entity_types).items():
             owners = entity.get("owners") or []
             if owners:
                 continue

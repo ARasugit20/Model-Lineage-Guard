@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from app.checks.base import Check, entity_properties, lineage_entities
+from app.checks.base import Check, entity_properties, lineage_entities_by_type
 from app.findings import Finding, Severity
 
 
@@ -16,15 +16,19 @@ class SchemaDriftCheck(Check):
     severity = Severity.HIGH
 
     def run(self, context: dict[str, Any]) -> list[Finding]:
-        entities = lineage_entities(context)
         changed_sources = [
             (urn, entity, entity_properties(entity))
-            for urn, entity in entities.items()
+            for urn, entity in lineage_entities_by_type(context, "dataset").items()
             if entity_properties(entity).get("mlguard.schema_change")
         ]
         consumers = [
             (urn, entity, entity_properties(entity))
-            for urn, entity in entities.items()
+            for urn, entity in lineage_entities_by_type(
+                context,
+                "mlFeatureTable",
+                "mlFeature",
+                "mlModel",
+            ).items()
             if entity_properties(entity).get("mlguard.expected_upstream_schema")
         ]
 

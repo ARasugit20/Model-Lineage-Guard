@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from app.checks.base import Check, entity_properties, lineage_entities
+from app.checks.base import Check, entity_properties, lineage_entities_by_type
 from app.findings import Finding, Severity
 
 
@@ -18,7 +18,7 @@ class StaleDatasetCheck(Check):
     def run(self, context: dict[str, Any]) -> list[Finding]:
         scan_time = _parse_time(context.get("scan_started_at")) or datetime.now(UTC)
         findings: list[Finding] = []
-        for urn, entity in lineage_entities(context).items():
+        for urn, entity in lineage_entities_by_type(context, "dataset").items():
             props = entity_properties(entity)
             cadence = props.get("mlguard.expected_cadence_hours")
             refreshed = _parse_time(props.get("mlguard.last_refreshed_at"))

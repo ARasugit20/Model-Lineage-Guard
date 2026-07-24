@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.checks.base import Check, entity_properties, lineage_entities
+from app.checks.base import Check, entity_properties, lineage_entities_by_type
 from app.findings import Finding, Severity
 
 
@@ -16,7 +16,7 @@ class DeploymentConfigDriftCheck(Check):
 
     def run(self, context: dict[str, Any]) -> list[Finding]:
         findings: list[Finding] = []
-        for urn, entity in lineage_entities(context).items():
+        for urn, entity in lineage_entities_by_type(context, "mlModelDeployment").items():
             props = entity_properties(entity)
             expected = props.get("mlguard.expected_instance_type")
             actual = props.get("mlguard.actual_instance_type")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.checks.base import Check, contains_token, entity_properties, lineage_entities
+from app.checks.base import Check, contains_token, entity_properties, lineage_entities_by_type
 from app.findings import Finding, Severity
 
 POST_OUTCOME_TOKENS = (
@@ -26,7 +26,13 @@ class FeatureLeakageRiskCheck(Check):
 
     def run(self, context: dict[str, Any]) -> list[Finding]:
         findings: list[Finding] = []
-        for urn, entity in lineage_entities(context).items():
+        for urn, entity in lineage_entities_by_type(
+            context,
+            "dataset",
+            "mlFeatureTable",
+            "mlFeature",
+            "mlModel",
+        ).items():
             props = entity_properties(entity)
             explicit = props.get("mlguard.leakage_candidate", "").lower() == "true"
             evidence = props.get("mlguard.leakage_evidence")

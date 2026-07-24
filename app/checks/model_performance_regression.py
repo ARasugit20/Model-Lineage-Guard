@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.checks.base import Check, entity_properties, lineage_entities
+from app.checks.base import Check, entity_properties, lineage_entities_by_type
 from app.findings import Finding, Severity
 
 
@@ -16,7 +16,7 @@ class ModelPerformanceRegressionCheck(Check):
 
     def run(self, context: dict[str, Any]) -> list[Finding]:
         findings: list[Finding] = []
-        for urn, entity in lineage_entities(context).items():
+        for urn, entity in lineage_entities_by_type(context, "mlModel").items():
             props = entity_properties(entity)
             metric = props.get("mlguard.performance_metric")
             baseline = _float_or_none(props.get("mlguard.baseline_metric_value"))
