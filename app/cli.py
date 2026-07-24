@@ -127,12 +127,25 @@ def scan_all(
         int,
         typer.Option("--max-breadth", help="Maximum lineage edges per node to scan."),
     ] = 100,
+    max_downstream: Annotated[
+        int,
+        typer.Option("--max-downstream", help="Maximum discovered ML models to scan."),
+    ] = 50,
 ) -> None:
     """Scan all DataHub ML models visible to the configured client."""
     client = DataHubClient()
     models = client.list_ml_models()
     typer.echo(f"Connected to DataHub at {client.settings.gms_host}")
     typer.echo(f"Found {len(models)} ML model(s).")
+    if max_downstream < 1:
+        raise typer.BadParameter("--max-downstream must be at least 1.")
+    if len(models) > max_downstream:
+        typer.echo(
+            "Warning: scan-all found "
+            f"{len(models)} model(s); scanning first {max_downstream}. "
+            "Increase --max-downstream to scan more."
+        )
+        models = models[:max_downstream]
     for model in models:
         typer.echo(f"  {model}")
         model_out = out / _safe_dir_name(model)
