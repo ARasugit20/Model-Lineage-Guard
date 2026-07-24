@@ -51,6 +51,7 @@ class RiskReport:
     scan_started_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     writeback_applied: bool = False
     writeback_dry_run: bool = False
+    _graph_cache: dict[str, Any] | None = field(default=None, init=False, repr=False, compare=False)
 
     def to_dict(self) -> dict[str, Any]:
         """Return a stable JSON-serializable report representation."""

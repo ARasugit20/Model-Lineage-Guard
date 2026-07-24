@@ -1,6 +1,7 @@
 """Render risk reports to HTML, JSON, and pull-request markdown."""
 
 import json
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -120,6 +121,15 @@ def _group_findings(findings: list[Finding]) -> dict[str, list[dict[str, Any]]]:
 
 
 def _build_graph(report: RiskReport, lineage_graph: dict[str, Any]) -> dict[str, Any]:
+    if report._graph_cache is None:
+        object.__setattr__(report, "_graph_cache", _build_graph_payload(report, lineage_graph))
+    cached = report._graph_cache
+    if cached is None:
+        raise RuntimeError("Graph cache was not initialized.")
+    return deepcopy(cached)
+
+
+def _build_graph_payload(report: RiskReport, lineage_graph: dict[str, Any]) -> dict[str, Any]:
     target = report.target_urn
     node_urns = {target}
     edges: list[dict[str, str]] = []

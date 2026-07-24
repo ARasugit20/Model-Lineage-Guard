@@ -3,7 +3,7 @@
 import json
 
 from app.findings import Finding, RiskReport, Severity
-from app.report import render_html, render_json, render_markdown
+from app.report import _build_graph, render_html, render_json, render_markdown
 
 
 def test_render_json_writes_report_file(tmp_path) -> None:
@@ -95,3 +95,29 @@ def test_render_markdown_writes_pr_comment(tmp_path) -> None:
     assert "| Severity | Check | Entity | Finding |" in markdown
     assert "pii_exposure" in markdown
     assert "Write-back: off" in markdown
+
+
+def test_build_graph_memoizes_and_returns_mutation_safe_copy(monkeypatch) -> None:
+    report = RiskReport(target_urn="urn:li:mlModel:(demo,credit_risk_v3,PROD)")
+    lineage = {
+        "upstream": [{"source_urn": report.target_urn, "urn": "urn:li:dataset:(demo,raw,PROD)"}],
+        "downstream": [],
+    }
+    calls: list[str] = []
+
+    def node_payload(urn, target, findings):
+        del target, findings
+        calls.append(urn)
+        return {"id": urn}
+
+    monkeypatch.setattr("app.report._node_payload", node_payload)
+
+    first = _build_graph(report, lineage)
+    first["nodes"].append({"id": "mutated"})
+    second = _build_graph(report, lineage)
+
+    assert calls == [
+        "urn:li:dataset:(demo,raw,PROD)",
+        "urn:li:mlModel:(demo,credit_risk_v3,PROD)",
+    ]
+    assert {"id": "mutated"} not in second["nodes"]
